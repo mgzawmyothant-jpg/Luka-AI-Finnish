@@ -1,0 +1,18 @@
+packages:
+  "zustand": "State management for settings and chat history"
+  "framer-motion": "Animations and page transitions"
+  "react-markdown": "Rendering AI responses in Markdown"
+  "remark-gfm": "Markdown tables and formatting support"
+  "sonner": "Toast notifications"
+  "@tailwindcss/typography": "Tailwind typography plugin for beautiful markdown rendering"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility to merge tailwind classes without style conflicts"
+
+images:
+  - path: "artifacts/luka-ai/public/images/search-bg.png"
+    description: "Abstract gradient mesh background in deep dark blue and cyan, sleek professional tech vibe, minimal and elegant, dark mode"
+    aspect_ratio: "16:9"
+
+notes:
+  - "Assuming generated API hooks from @workspace/api-client-react are fully available and correctly typed."
+  - "Using sonner for toasts as a drop-in replacement for the shadcn toaster to keep dependencies lean and polished."

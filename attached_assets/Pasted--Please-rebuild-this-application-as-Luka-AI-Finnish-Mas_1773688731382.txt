@@ -1,0 +1,290 @@
+
+"Please rebuild this application as 'Luka AI - Finnish Master' based on these technical specifications:
+
+1. Framework & UI:
+
+Frontend: Use React with Tailwind CSS.
+
+Design: Use a professional Dark Blue, White, and Cyan theme (matching the user's FlutterFlow reference).
+
+Structure: Navigation with 4 main tabs: [Search], [OCR], [Luka Assistant], [History/Export].
+
+2. Backend Logic (Crucial):
+
+Use Python for the backend logic.
+
+Integrate Google Gemini 3.1 Pro Preview (using the latest google-generativeai library).
+
+System Prompt 1 (Professor Mode): When in Search/OCR mode, act as a Finnish Professor. Provide: Meaning, Word Class, Verb Type (1-6), Stem Changes, Conjugation Tables, and EXACTLY 5 Formal Examples, 5 Casual Examples in Myanmar language.
+
+System Prompt 2 (Assistant Mode): Act as a high-intelligence Assistant. Support Image/Voice inputs.
+
+Output Language: AI must respond ONLY in Myanmar language.
+
+3. Features:
+
+Implement Word Search logic (Section 1).
+
+Implement Multimodal OCR logic (Section 2) using Gemini's image understanding.
+
+Implement Thinking Mode with Voice Note support (Section 3).
+
+Add a 'Download Word File' feature that exports the last AI response into a .docx file (Section 4).
+
+4. User Inputs:
+
+Allow users to manually set their Gemini API Key and select the Model Version in a 'Settings' drawer.
+
+Here is the core logic from my previous code:
+### --- LUKA AI MASTER SYSTEM (GEMINI 3.1 PRO PREVIEW) --- ###
+
+# [0] လိုအပ်သော Library များသွင်းခြင်း
+import os, subprocess, time, base64, io, warnings
+
+def install_libraries():
+    try:
+        import google.generativeai as genai
+        import whisper
+        from docx import Document
+        import pytesseract
+    except ImportError:
+        print("📦 LUKA System ကို ပြင်ဆင်နေပါသည်...")
+        subprocess.check_call("apt-get install -y tesseract-ocr && pip install pytesseract openai-whisper python-docx", shell=True)
+        print("✅ Libraries များ သွင်းပြီးပါပြီ။")
+
+install_libraries()
+
+import google.generativeai as genai
+import whisper
+from PIL import Image
+import ipywidgets as widgets
+from google.colab import files, output
+from IPython.display import display, Markdown, clear_output, Javascript, Audio
+from docx import Document
+from docx.shared import Pt
+
+warnings.filterwarnings("ignore")
+
+# API Configuration
+GOOGLE_API_KEY = "AIzaSyDj1Uv_RlkfjxdUODT8xoPYY1nCQ_uwH84"
+genai.configure(api_key=GOOGLE_API_KEY)
+stt_model = whisper.load_model("base")
+
+# အစ်ကိုပေးထားသော List ထဲမှ အမြင့်ဆုံး Model
+MODEL_ID = "models/gemini-3.1-pro-preview"
+
+# ---------------------------------------------------------
+# [1] LUKA SYSTEM LOGIC & STATE
+# ---------------------------------------------------------
+
+prof_sys = """မင်းရဲ့အမည်က LUKA AI ဖြစ်ပါတယ်။ မင်းဟာ ဖင်လန်ဘာသာစကား ပါမောက္ခတစ်ဦး ဖြစ်ပါတယ်။
+- Section 1: Meaning, Word Class, Verb Type (1-6), Stem Changes, Conjugation Tables နဲ့ EXACTLY 5 Formal Examples, 5 Casual Examples ကို မြန်မာလိုပဲ ထုတ်ပေးပါ။
+- Section 2: PART 1-4 format အတိုင်း အတိအကျ ပြန်ပေးပါ။ မြန်မာစာကိုပဲ သုံးပါ။"""
+
+asst_sys = """မင်းရဲ့အမည်က LUKA AI ဖြစ်ပါတယ်။ မင်းဟာ အသိဉာဏ်အမြင့်ဆုံး AI Assistant ဖြစ်ပါတယ်။
+User ပေးတဲ့ အသံမှတ်စု၊ ပုံ၊ ဗီဒီယိုတွေကို ကြည့်ပြီး မင်းရဲ့ Thinking Mode သုံးပြီး လူတစ်ယောက်လို မြန်မာလိုပဲ ကျွမ်းကျင်စွာ ဖြေပေးပါ။"""
+
+prof_model = genai.GenerativeModel(model_name=MODEL_ID, system_instruction=prof_sys)
+asst_model = genai.GenerativeModel(model_name=MODEL_ID, system_instruction=asst_sys)
+
+class LukaState:
+    def __init__(self):
+        self.last_response = ""
+        self.files = []
+        self.transcripts = []
+        self.chat_session = asst_model.start_chat(history=[])
+
+state = LukaState()
+out_area = widgets.Output()
+
+# ---------------------------------------------------------
+# [2] ADVANCED VOICE RECORDING JAVASCRIPT
+# ---------------------------------------------------------
+RECORD_JS = """
+window.recorder = null; window.stream = null; window.chunks = []; window.origTitle = document.title;
+window.startRecording = async function() {
+  window.chunks = [];
+  window.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  window.recorder = new MediaRecorder(window.stream);
+  document.title = "🔴 Recording... - LUKA AI";
+  const ui = document.createElement('div');
+  ui.id = 'luka-recording-box';
+  ui.innerHTML = `
+    <div style="display:flex; align-items:center; gap:15px; background:rgba(0,0,0,0.95); padding:20px 30px; border-radius:15px; border:2px solid #ff4b2b; position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:99999; box-shadow:0 10px 40px rgba(0,0,0,0.8); color:white; font-family:sans-serif;">
+       <div style="font-size:24px; animation: pulse 1s infinite;">🎙️</div>
+       <div style="display:flex; align-items:flex-end; gap:5px; height:25px;">
+          <div class="v-bar"></div><div class="v-bar" style="animation-delay:0.1s"></div><div class="v-bar" style="animation-delay:0.2s"></div><div class="v-bar" style="animation-delay:0.3s"></div><div class="v-bar" style="animation-delay:0.4s"></div>
+       </div>
+       <div style="font-weight:bold; letter-spacing:1px; font-size:16px;">LUKA IS LISTENING...</div>
+    </div>
+    <style>
+      .v-bar { width:5px; height:10px; background:#ff4b2b; animation: wave 0.6s infinite ease-in-out; border-radius:2px; }
+      @keyframes wave { 0%, 100% { height:10px; } 50% { height:28px; } }
+      @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+    </style>
+  `;
+  document.body.appendChild(ui);
+  window.recorder.ondataavailable = e => window.chunks.push(e.data);
+  window.recorder.start();
+};
+window.stopRecording = function() {
+  return new Promise(resolve => {
+    window.recorder.onstop = () => {
+      const blob = new Blob(window.chunks);
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+      reader.onloadend = () => {
+        resolve(reader.result);
+        window.stream.getTracks().forEach(t => t.stop());
+        document.title = window.origTitle;
+        const ui = document.getElementById('luka-recording-box');
+        if(ui) ui.remove();
+      };
+    };
+    window.recorder.stop();
+  });
+};
+"""
+display(Javascript(RECORD_JS))
+
+# ---------------------------------------------------------
+# [3] HANDLERS
+# ---------------------------------------------------------
+
+def handle_search(b):
+    if not search_in.value: return
+    with out_area:
+        clear_output(); b.disabled = True
+        print(f"🔍 LUKA is analyzing '{search_in.value}'...")
+        res = prof_model.generate_content(f"Analyze the word: {search_in.value}")
+        state.last_response = res.text
+        clear_output(); display(Markdown(res.text)); b.disabled = False
+
+def handle_ocr(b):
+    with out_area:
+        clear_output(); uploaded = files.upload()
+        if uploaded:
+            b.disabled = True; print("🤖 LUKA is processing document (PART 1-4)...")
+            img_data = list(uploaded.values())[0]
+            res = prof_model.generate_content(["Generate OCR Report in PART 1-4 format from this image:", Image.open(io.BytesIO(img_data))])
+            state.last_response = res.text
+            clear_output(); display(Markdown(res.text)); b.disabled = False
+
+def start_voice(b):
+    output.eval_js('startRecording()')
+    rec_start.disabled = True; rec_stop.disabled = False
+
+def stop_voice(b):
+    with out_area:
+        print("⚡ Processing voice data...")
+        audio_data = output.eval_js('stopRecording()')
+        if audio_data:
+            audio_bytes = base64.decodebytes(audio_data.split(',')[1].encode())
+            with open("v.wav", "wb") as f: f.write(audio_bytes)
+            trans = stt_model.transcribe("v.wav")
+            state.transcripts.append(f"[Voice Memo]: {trans['text']}")
+            print(f"✅ Voice Attached: {trans['text']}")
+        rec_start.disabled = False; rec_stop.disabled = True
+
+def handle_ask(b):
+    with out_area:
+        if not chat_in.value and not state.transcripts and not state.files:
+            print("⚠️ မေးခွန်း သို့မဟုတ် ဖိုင်တစ်ခုခု ထည့်ပေးပါ။")
+            return
+
+        clear_output(); b.disabled = True; b.description = "Thinking..."
+
+        prompt_parts = []
+        text_context = chat_in.value
+        if state.transcripts:
+            text_context += "\n\nVoice Context: " + " ".join(state.transcripts)
+
+        if text_context: prompt_parts.append(text_context)
+        else: prompt_parts.append("Please analyze the attached media.")
+
+        for f in state.files: prompt_parts.append(f)
+
+        try:
+            res = state.chat_session.send_message(prompt_parts)
+            state.last_response = res.text
+            clear_output(); display(Markdown(res.text))
+        except Exception as e: print(f"Error: {e}")
+
+        b.disabled = False; b.description = "Ask LUKA AI"
+
+def handle_media(b):
+    with out_area:
+        uploaded = files.upload()
+        for fn, content in uploaded.items():
+            state.files.append(Image.open(io.BytesIO(content)))
+        print(f"✅ Attached {len(uploaded)} file(s).")
+
+def handle_reset_all(b):
+    state.files = []; state.transcripts = []
+    state.chat_session = asst_model.start_chat(history=[])
+    chat_in.value = ""
+    with out_area: clear_output(); print("🔄 System Reset. Memory Cleared.")
+
+def handle_clear_screen(b):
+    with out_area: clear_output(); print("🧹 Screen Cleared.")
+
+# --- အစ်ကိုလိုချင်တဲ့ အလွယ်ဆုံး Word Export စနစ် ---
+def handle_export(b):
+    if not state.last_response: return
+    doc = Document()
+    for line in state.last_response.split('\n'):
+        p = doc.add_paragraph()
+        if '###' in line or 'PART' in line:
+            run = p.add_run(line.replace('###','').strip()); run.bold = True; run.font.size = Pt(14)
+        else:
+            p.text = line
+            p.style.font.size = Pt(11)
+    doc.save("LukaAI_Note.docx")
+    files.download("LukaAI_Note.docx")
+
+# ---------------------------------------------------------
+# [4] UI LAYOUT
+# ---------------------------------------------------------
+
+search_in = widgets.Text(placeholder='opiskella', description='စကားလုံး:')
+search_btn = widgets.Button(description='ရှာဖွေပါ', button_style='primary')
+search_btn.on_click(handle_search)
+
+ocr_btn = widgets.Button(description='OCR Upload & Report', button_style='success')
+ocr_btn.on_click(handle_ocr)
+
+rec_start = widgets.Button(description='Record Voice', icon='microphone', button_style='danger')
+rec_stop = widgets.Button(description='Stop & Attach', icon='stop', button_style='warning', disabled=True)
+media_btn = widgets.Button(description='Attach Media', icon='paperclip', button_style='info')
+reset_btn = widgets.Button(description='Reset Memory', icon='refresh', button_style='danger')
+
+chat_in = widgets.Textarea(placeholder='LUKA AI ကို ဘာမဆိုမေးပါ...', layout={'width': '100%', 'height': '100px'})
+ask_btn = widgets.Button(description='Ask LUKA AI', button_style='success', layout={'width': '200px'})
+
+rec_start.on_click(start_voice); rec_stop.on_click(stop_voice); media_btn.on_click(handle_media)
+ask_btn.on_click(handle_ask); reset_btn.on_click(handle_reset_all)
+
+export_btn = widgets.Button(description='Word ဖိုင်ထုတ်မည်', icon='file-word', button_style='info', layout={'width': '200px'})
+export_btn.on_click(handle_export)
+clear_screen_btn = widgets.Button(description='Clear Screen', icon='eraser', button_style='')
+clear_screen_btn.on_click(handle_clear_screen)
+
+print(f"--- 🇫🇮 LUKA AI MASTER SYSTEM ---")
+display(widgets.HTML("<b>🔍 Section 1: Professor Mode Search</b>"), widgets.HBox([search_in, search_btn]))
+display(widgets.HTML("<br><b>📄 Section 2: Document OCR</b>"), ocr_btn)
+display(widgets.HTML("<hr><b>🧠 Section 3: Professional Assistant (Thinking Mode)</b>"))
+display(widgets.HBox([rec_start, rec_stop, media_btn, reset_btn]))
+display(chat_in, ask_btn)
+display(widgets.HTML("<br><b>💾 Section 4: Export Result</b>"), widgets.HBox([export_btn, clear_screen_btn]))
+display(out_area)
+
+Please apply these instructions and rewrite the English chatbot into the Myanmar Finnish Professor app."
+
+Replit Agent ဆီကို ဒီစာသား (Prompt) လေး ထပ်ပို့ပေးပါ -
+"Please update the app with these requirements for API Security:
+Add a 'Gemini API Key' input field in the Settings menu.
+When the app first opens, if no API Key is found, show a 'Welcome/Setup' screen that asks the user to enter their own Gemini API Key before they can use the app.
+Save the API Key in the browser's local storage so the user doesn't have to re-enter it every time.
+Ensure all AI features (Search, OCR, Assistant) use this user-provided API Key instead of any hardcoded key.
+If the API Key is invalid or missing, show a clear error message and direct the user back to the Settings menu."
+

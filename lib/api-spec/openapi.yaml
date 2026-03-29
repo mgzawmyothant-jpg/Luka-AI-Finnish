@@ -1,0 +1,297 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: Luka AI - Finnish Master API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: luka
+    description: Luka AI operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /luka/search:
+    post:
+      operationId: lukaSearch
+      tags: [luka]
+      summary: Analyze a Finnish word
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchRequest"
+      responses:
+        "200":
+          description: AI analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LukaResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /luka/ocr:
+    post:
+      operationId: lukaOcr
+      tags: [luka]
+      summary: OCR and analyze an image
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OcrRequest"
+      responses:
+        "200":
+          description: OCR analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LukaResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /luka/chat:
+    post:
+      operationId: lukaChat
+      tags: [luka]
+      summary: Chat with Luka Assistant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+      responses:
+        "200":
+          description: Assistant response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LukaResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /luka/history:
+    get:
+      operationId: getHistory
+      tags: [luka]
+      summary: Get conversation history
+      responses:
+        "200":
+          description: History list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HistoryResponse"
+    delete:
+      operationId: clearHistory
+      tags: [luka]
+      summary: Clear conversation history
+      responses:
+        "200":
+          description: History cleared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LukaResponse"
+  /luka/export:
+    post:
+      operationId: exportDocx
+      tags: [luka]
+      summary: Export text as DOCX
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExportRequest"
+      responses:
+        "200":
+          description: DOCX file binary
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    SearchRequest:
+      type: object
+      properties:
+        word:
+          type: string
+        apiKey:
+          type: string
+        model:
+          type: string
+      required:
+        - word
+    OcrRequest:
+      type: object
+      properties:
+        imageBase64:
+          type: string
+        mimeType:
+          type: string
+        apiKey:
+          type: string
+        model:
+          type: string
+      required:
+        - imageBase64
+        - mimeType
+    ChatRequest:
+      type: object
+      properties:
+        message:
+          type: string
+        imageBase64:
+          type: string
+        imageMimeType:
+          type: string
+        audioBase64:
+          type: string
+          description: Raw audio file encoded as base64 (e.g. audio/webm from MediaRecorder)
+        audioMimeType:
+          type: string
+          description: MIME type of the audio (e.g. audio/webm)
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+        apiKey:
+          type: string
+        model:
+          type: string
+      required:
+        - message
+    ChatMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, model]
+        text:
+          type: string
+      required:
+        - role
+        - text
+    LukaResponse:
+      type: object
+      properties:
+        text:
+          type: string
+        success:
+          type: boolean
+      required:
+        - text
+        - success
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    HistoryItem:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [search, ocr, chat]
+        query:
+          type: string
+        response:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - id
+        - type
+        - query
+        - response
+        - timestamp
+    HistoryResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/HistoryItem"
+      required:
+        - items
+    ExportRequest:
+      type: object
+      properties:
+        text:
+          type: string
+        filename:
+          type: string
+      required:
+        - text
