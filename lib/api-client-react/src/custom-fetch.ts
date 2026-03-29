@@ -275,6 +275,14 @@ export async function customFetch<T = unknown>(
   input: RequestInfo | URL,
   options: CustomFetchOptions = {},
 ): Promise<T> {
+  // ----- အောက်က ၄ ကြောင်းကို အသစ် ဝင်ကူးထည့်ပါ -----
+  const BASE_URL = "https://luka-2026.onrender.com"; // ဒီနေရာမှာ အစ်ကို့ Render လင့်ခ်အမှန်ကို ပြင်ထည့်ပါ
+  if (typeof input === "string" && input.startsWith("/")) {
+    input = BASE_URL + input;
+  }
+  // ---------------------------------------------
+
+  
   const { responseType = "auto", headers: headersInit, ...init } = options;
 
   const method = resolveMethod(input, init.method);
