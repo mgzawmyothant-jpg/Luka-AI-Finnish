@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSettings, MODELS } from "@/store/use-settings";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { KeyRound, Cpu, X, ExternalLink } from "lucide-react";
 
 export function SettingsDrawer() {
