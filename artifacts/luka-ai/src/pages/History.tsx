@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useGetHistory, useClearHistory, getGetHistoryQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Download, Trash2, Search, ScanText, MessageSquare, ChevronDown, Clock } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 
