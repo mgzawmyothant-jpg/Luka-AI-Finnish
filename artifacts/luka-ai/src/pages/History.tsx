@@ -4,7 +4,7 @@ import { useGetHistory, useClearHistory, getGetHistoryQueryKey } from "@workspac
 import { useQueryClient } from "@tanstack/react-query";
 import { Download, Trash2, Search, ScanText, MessageSquare, ChevronDown, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/Card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";

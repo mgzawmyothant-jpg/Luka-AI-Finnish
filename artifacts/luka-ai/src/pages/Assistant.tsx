@@ -4,7 +4,7 @@ import { Send, Mic, Square, Paperclip, Camera, Trash2, X, MessageSquare } from "
 import { useSettings } from "@/store/use-settings";
 import { useChatStore } from "@/store/use-chat";
 import { useLukaChat } from "@workspace/api-client-react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { fileToBase64, cn } from "@/lib/utils";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";

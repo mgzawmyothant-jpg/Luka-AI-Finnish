@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { KeyRound, Cpu, ExternalLink, ArrowRight } from "lucide-react";
 import { useSettings, MODELS } from "@/store/use-settings";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 
 export function WelcomeScreen() {
   const { setApiKey, setModel, model } = useSettings();
